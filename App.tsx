@@ -2,7 +2,6 @@ import React from "react";
 import {
   Dimensions,
   Platform,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
@@ -17,28 +16,25 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar hidden />
 
-      <View style={styles.left}>
-        <Text style={styles.title}>MIMO DISPLAY</Text>
-        <Text style={styles.status}>POC READY</Text>
-      </View>
+      <View style={styles.leftEdge} />
 
-      <View style={styles.info}>
-        <Text style={styles.text}>
-          WINDOW: {Math.round(window.width)} × {Math.round(window.height)}
+      <View style={styles.content}>
+        <Text style={styles.title}>MIMO DISPLAY POC</Text>
+
+        <Text style={styles.info}>
+          WINDOW {Math.round(window.width)} × {Math.round(window.height)}
         </Text>
 
-        <Text style={styles.text}>
-          SCREEN: {Math.round(screen.width)} × {Math.round(screen.height)}
+        <Text style={styles.info}>
+          SCREEN {Math.round(screen.width)} × {Math.round(screen.height)}
         </Text>
 
-        <Text style={styles.text}>
-          ANDROID API: {Platform.Version}
+        <Text style={styles.info}>
+          API {Platform.Version}
         </Text>
       </View>
 
-      <View style={styles.test}>
-        <Text style={styles.testText}>1920 × 165 TEST</Text>
-      </View>
+      <View style={styles.rightEdge} />
     </View>
   );
 }
@@ -47,49 +43,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#101010",
-    paddingHorizontal: 30,
+    backgroundColor: "#111",
   },
 
-  left: {
-    width: 350,
-  },
-
-  title: {
-    color: "white",
-    fontSize: 28,
-    fontWeight: "bold",
-  },
-
-  status: {
-    color: "#4ade80",
-    fontSize: 18,
-    marginTop: 4,
-  },
-
-  info: {
+  content: {
     flex: 1,
-  },
-
-  text: {
-    color: "white",
-    fontSize: 17,
-    marginVertical: 2,
-  },
-
-  test: {
-    width: 350,
-    height: 90,
-    borderWidth: 3,
-    borderColor: "white",
     justifyContent: "center",
     alignItems: "center",
   },
 
-  testText: {
+  title: {
     color: "white",
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: "bold",
+  },
+
+  info: {
+    color: "white",
+    fontSize: 16,
+  },
+
+  leftEdge: {
+    width: 10,
+    height: "100%",
+    backgroundColor: "red",
+  },
+
+  rightEdge: {
+    width: 10,
+    height: "100%",
+    backgroundColor: "blue",
   },
 });
