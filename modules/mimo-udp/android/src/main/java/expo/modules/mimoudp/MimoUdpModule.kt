@@ -10,6 +10,7 @@ class MimoUdpModule : Module() {
 
     private var socket: DatagramSocket? = null
     private var listenerThread: Thread? = null
+
     @Volatile
     private var listening = false
 
@@ -21,71 +22,73 @@ class MimoUdpModule : Module() {
 
         Function("startListening") { port: Int ->
 
-            if (listening) {
-                return@Function
-            }
+            if (!listening) {
 
-            listening = true
+                listening = true
 
-            listenerThread = Thread {
+                listenerThread = Thread {
 
-                try {
+                    try {
+                        socket = DatagramSocket(port)
 
-                    socket = DatagramSocket(port)
+                        val buffer = ByteArray(2048)
 
-                    val buffer = ByteArray(2048)
+                        while (listening) {
 
-                    while (listening) {
+                            val packet = DatagramPacket(
+                                buffer,
+                                buffer.size
+                            )
 
-                        val packet = DatagramPacket(
-                            buffer,
-                            buffer.size
-                        )
+                            socket?.receive(packet)
 
-                        socket?.receive(packet)
+                            val message = String(
+                                packet.data,
+                                packet.offset,
+                                packet.length,
+                                Charsets.UTF_8
+                            )
 
-                        val message = String(
-                            packet.data,
-                            packet.offset,
-                            packet.length,
-                            Charsets.UTF_8
-                        )
+                            sendEvent(
+                                "onMessage",
+                                mapOf(
+                                    "message" to message,
+                                    "address" to (
+                                        packet.address?.hostAddress ?: ""
+                                    )
+                                )
+                            )
+                        }
+
+                    } catch (e: SocketException) {
+
+                        // Closing the socket in stopListening()
+                        // causes receive() to throw. That's expected.
+
+                    } catch (e: Exception) {
 
                         sendEvent(
                             "onMessage",
                             mapOf(
-                                "message" to message,
-                                "address" to packet.address.hostAddress
+                                "message" to "__ERROR__:${e.message}",
+                                "address" to ""
                             )
                         )
+
+                    } finally {
+
+                        listening = false
+
+                        socket?.close()
+                        socket = null
                     }
-
-                } catch (e: SocketException) {
-
-                    // Expected when stopListening() closes socket.
-
-                } catch (e: Exception) {
-
-                    sendEvent(
-                        "onMessage",
-                        mapOf(
-                            "message" to "__ERROR__:${e.message}",
-                            "address" to ""
-                        )
-                    )
-
-                } finally {
-
-                    listening = false
-
-                    socket?.close()
-                    socket = null
                 }
+
+                listenerThread?.start()
             }
 
-            listenerThread?.start()
+            null
         }
-
 
         Function("stopListening") {
 
@@ -95,11 +98,8 @@ class MimoUdpModule : Module() {
             socket = null
 
             listenerThread = null
-        }
 
-
-        Function("isListening") {
-            listening
+            null
         }
     }
 }
