@@ -15,11 +15,15 @@
       "supportsTablet": true
     },
     "android": {
+      "permissions": [
+        "INTERNET"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.axel0fficial.MimoDisplay"
+      "package": "com.axel0fficial.MimoDisplay",
+      
     },
     "web": {
       "favicon": "./assets/favicon.png"

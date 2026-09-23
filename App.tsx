@@ -1,104 +1,85 @@
 import React, { useEffect, useState } from "react";
 import {
   Image,
+  ImageSourcePropType,
   StatusBar,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
-const SERVER = "http://172.16.1.32:8765";
+import MimoUdp, {
+  MimoUdpMessageEvent,
+} from "./modules/mimo-udp/src/MimoUdpModule";
 
-type Content = {
-  version: number;
-  type: "image";
-  url: string;
+const UDP_PORT = 5005;
+
+const images: Record<string, ImageSourcePropType> = {
+  HOME: require("./assets/home.png"),
+  ONE: require("./assets/one.png"),
+  TWO: require("./assets/two.png"),
 };
 
 export default function App() {
-  const [content, setContent] = useState<Content | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function loadContent() {
-    try {
-      const response = await fetch(`${SERVER}/api/status`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data: Content = await response.json();
-
-      setContent(data);
-      setError(null);
-    } catch (err) {
-      console.log(err);
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to connect to server"
-      );
-    }
-  }
+  const [currentCommand, setCurrentCommand] = useState("HOME");
+  const [lastSender, setLastSender] = useState<string | null>(null);
 
   useEffect(() => {
-    loadContent();
+    console.log(`Starting UDP listener on port ${UDP_PORT}`);
 
-    const interval = setInterval(() => {
-      loadContent();
-    }, 5000);
+    MimoUdp.startListening(UDP_PORT);
 
-    return () => clearInterval(interval);
+    const subscription = MimoUdp.addListener(
+      "onMessage",
+      (event: MimoUdpMessageEvent) => {
+        const command = event.message
+          .trim()
+          .toUpperCase();
+
+        console.log(
+          `UDP from ${event.address}: ${command}`
+        );
+
+        if (command.startsWith("__ERROR__:")) {
+          console.log("UDP error:", command);
+          return;
+        }
+
+        if (images[command]) {
+          setCurrentCommand(command);
+          setLastSender(event.address);
+        } else {
+          console.log(
+            `Unknown UDP command: ${command}`
+          );
+        }
+      }
+    );
+
+    return () => {
+      subscription.remove();
+      MimoUdp.stopListening();
+    };
   }, []);
 
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <StatusBar hidden />
-
-        <Text style={styles.title}>
-          MIMO DISPLAY
-        </Text>
-
-        <Text style={styles.error}>
-          Server unavailable
-        </Text>
-
-        <Text style={styles.server}>
-          {SERVER}
-        </Text>
-
-        <Text style={styles.retry}>
-          Retrying...
-        </Text>
-      </View>
-    );
-  }
-
-  if (!content) {
-    return (
-      <View style={styles.center}>
-        <StatusBar hidden />
-
-        <Text style={styles.title}>
-          Connecting to MIMO server...
-        </Text>
-      </View>
-    );
-  }
+  const currentImage = images[currentCommand];
 
   return (
     <View style={styles.container}>
       <StatusBar hidden />
 
       <Image
-        source={{
-          uri: `${SERVER}${content.url}?v=${content.version}`,
-        }}
+        source={currentImage}
         style={styles.image}
         resizeMode="cover"
       />
+
+      <View style={styles.debug}>
+        <Text style={styles.debugText}>
+          UDP :{UDP_PORT} | {currentCommand}
+          {lastSender ? ` | ${lastSender}` : ""}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -114,34 +95,17 @@ const styles = StyleSheet.create({
     height: "100%",
   },
 
-  center: {
-    flex: 1,
-    backgroundColor: "#111",
-    alignItems: "center",
-    justifyContent: "center",
+  debug: {
+    position: "absolute",
+    left: 10,
+    bottom: 5,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
 
-  title: {
+  debugText: {
     color: "white",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-
-  error: {
-    color: "#ff5555",
-    fontSize: 18,
-    marginTop: 8,
-  },
-
-  server: {
-    color: "#aaa",
-    fontSize: 14,
-    marginTop: 4,
-  },
-
-  retry: {
-    color: "#aaa",
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 11,
   },
 });
