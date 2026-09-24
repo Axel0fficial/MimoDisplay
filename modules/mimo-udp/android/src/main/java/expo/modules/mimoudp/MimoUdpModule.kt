@@ -22,72 +22,74 @@ class MimoUdpModule : Module() {
 
         Function("startListening") { port: Int ->
 
-            if (!listening) {
+            if (listening) {
+                return@Function false
+            }
 
-                listening = true
+            listening = true
 
-                listenerThread = Thread {
+            listenerThread = Thread {
 
-                    try {
-                        socket = DatagramSocket(port)
+                try {
 
-                        val buffer = ByteArray(2048)
+                    socket = DatagramSocket(port)
 
-                        while (listening) {
+                    val buffer = ByteArray(2048)
 
-                            val packet = DatagramPacket(
-                                buffer,
-                                buffer.size
-                            )
+                    while (listening) {
 
-                            socket?.receive(packet)
+                        val packet = DatagramPacket(
+                            buffer,
+                            buffer.size
+                        )
 
-                            val message = String(
-                                packet.data,
-                                packet.offset,
-                                packet.length,
-                                Charsets.UTF_8
-                            )
+                        socket?.receive(packet)
 
-                            sendEvent(
-                                "onMessage",
-                                mapOf(
-                                    "message" to message,
-                                    "address" to (
-                                        packet.address?.hostAddress ?: ""
-                                    )
-                                )
-                            )
-                        }
-
-                    } catch (e: SocketException) {
-
-                        // Closing the socket in stopListening()
-                        // causes receive() to throw. That's expected.
-
-                    } catch (e: Exception) {
+                        val message = String(
+                            packet.data,
+                            packet.offset,
+                            packet.length,
+                            Charsets.UTF_8
+                        )
 
                         sendEvent(
                             "onMessage",
                             mapOf(
-                                "message" to "__ERROR__:${e.message}",
-                                "address" to ""
+                                "message" to message,
+                                "address" to (
+                                    packet.address?.hostAddress ?: ""
+                                )
                             )
                         )
-
-                    } finally {
-
-                        listening = false
-
-                        socket?.close()
-                        socket = null
                     }
-                }
 
-                listenerThread?.start()
+                } catch (e: SocketException) {
+
+                    // Expected when stopListening()
+                    // closes the socket.
+
+                } catch (e: Exception) {
+
+                    sendEvent(
+                        "onMessage",
+                        mapOf(
+                            "message" to "__ERROR__:${e.message}",
+                            "address" to ""
+                        )
+                    )
+
+                } finally {
+
+                    listening = false
+
+                    socket?.close()
+                    socket = null
+                }
             }
 
-            null
+            listenerThread?.start()
+
+            return@Function true
         }
 
         Function("stopListening") {
@@ -99,7 +101,12 @@ class MimoUdpModule : Module() {
 
             listenerThread = null
 
-            null
+            return@Function true
+        }
+
+        Function("isListening") {
+
+            return@Function listening
         }
     }
 }
